@@ -24,6 +24,7 @@ public interface NotebookEntryRepository extends Repository<NotebookEntryView, L
         String getColor();
         String getStyle();
         String getChapterTitle();
+        String getSource();
         String getPrimaryBookType();
         LocalDateTime getCreatedAt();
         LocalDateTime getUpdatedAt();
@@ -51,6 +52,7 @@ public interface NotebookEntryRepository extends Repository<NotebookEntryView, L
                    ne.color as color,
                    ne.style as style,
                    ne.chapterTitle as chapterTitle,
+                   ne.source as source,
                    ne.primaryBookType as primaryBookType,
                    ne.createdAt as createdAt,
                    ne.updatedAt as updatedAt
@@ -58,6 +60,7 @@ public interface NotebookEntryRepository extends Repository<NotebookEntryView, L
             WHERE ne.userId = :userId
             AND ne.entryType IN :types
             AND (:bookId IS NULL OR ne.bookId = :bookId)
+            AND (:source IS NULL AND ne.source IS NULL OR ne.source = :source)
             AND (:search IS NULL
                  OR ne.textContent LIKE :search ESCAPE '\\'
                  OR ne.noteContent LIKE :search ESCAPE '\\'
@@ -70,6 +73,7 @@ public interface NotebookEntryRepository extends Repository<NotebookEntryView, L
             WHERE ne.userId = :userId
             AND ne.entryType IN :types
             AND (:bookId IS NULL OR ne.bookId = :bookId)
+            AND (:source IS NULL AND ne.source IS NULL OR ne.source = :source)
             AND (:search IS NULL
                  OR ne.textContent LIKE :search ESCAPE '\\'
                  OR ne.noteContent LIKE :search ESCAPE '\\'
@@ -79,6 +83,7 @@ public interface NotebookEntryRepository extends Repository<NotebookEntryView, L
     Page<EntryProjection> findEntries(@Param("userId") Long userId,
                                       @Param("types") Set<String> types,
                                       @Param("bookId") Long bookId,
+                                      @Param("source") String source,
                                       @Param("search") String search,
                                       Pageable pageable);
 

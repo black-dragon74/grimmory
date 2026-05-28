@@ -14,7 +14,7 @@ public interface AnnotationRepository extends JpaRepository<AnnotationEntity, Lo
 
     Optional<AnnotationEntity> findByIdAndUserId(Long id, Long userId);
 
-    @Query("SELECT a FROM AnnotationEntity a WHERE a.bookId = :bookId AND a.userId = :userId ORDER BY a.createdAt DESC")
+    @Query("SELECT a FROM AnnotationEntity a WHERE a.bookId = :bookId AND a.userId = :userId AND a.source IS NULL ORDER BY a.createdAt DESC")
     List<AnnotationEntity> findByBookIdAndUserIdOrderByCreatedAtDesc(
             @Param("bookId") Long bookId,
             @Param("userId") Long userId
@@ -37,6 +37,10 @@ public interface AnnotationRepository extends JpaRepository<AnnotationEntity, Lo
     @Query("DELETE FROM AnnotationEntity a WHERE a.bookId = :bookId AND a.userId = :userId")
     void deleteByBookIdAndUserId(@Param("bookId") Long bookId, @Param("userId") Long userId);
 
-    @Query("SELECT a FROM AnnotationEntity a JOIN FETCH a.book b JOIN FETCH b.metadata WHERE a.userId = :userId ORDER BY a.createdAt DESC")
+    @Query("SELECT a FROM AnnotationEntity a JOIN FETCH a.book b JOIN FETCH b.metadata WHERE a.userId = :userId AND a.source IS NULL ORDER BY a.createdAt DESC")
     List<AnnotationEntity> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+    Optional<AnnotationEntity> findByExternalIdAndUserId(String externalId, Long userId);
+
+    List<AnnotationEntity> findByExternalIdInAndUserId(List<String> externalIds, Long userId);
 }

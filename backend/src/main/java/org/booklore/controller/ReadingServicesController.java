@@ -3,9 +3,12 @@ package org.booklore.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.booklore.config.security.service.AuthenticationService;
+import org.booklore.model.dto.BookLoreUser;
 import org.booklore.model.dto.kobo.KoboAnnotation;
 import org.booklore.model.dto.kobo.KoboAnnotationRequest;
 import org.booklore.model.dto.kobo.KoboAnnotationSpan;
+import org.booklore.service.kobo.KoboAnnotationSyncService;
 import org.booklore.service.kobo.KoboServerProxy;
 import org.booklore.util.RequestUtils;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,8 @@ public class ReadingServicesController {
 
     private final KoboServerProxy koboServerProxy;
     private final ObjectMapper objectMapper;
+    private final KoboAnnotationSyncService koboAnnotationSyncService;
+    private final AuthenticationService authenticationService;
 
     @PatchMapping("/content/{entitlementId}/annotations")
     public ResponseEntity<byte[]> patchAnnotations(
@@ -33,8 +38,9 @@ public class ReadingServicesController {
         try {
             KoboAnnotationRequest annotationRequest = objectMapper.readValue(rawBody, KoboAnnotationRequest.class);
             logAnnotationRequest(entitlementId, annotationRequest);
+            persistAnnotations(entitlementId, annotationRequest);
         } catch (Exception e) {
-            log.error("Error parsing/logging annotation request for entitlement {}", entitlementId, e);
+            log.error("Error processing annotation request for entitlement {}", entitlementId, e);
         }
 
         return koboServerProxy.proxyToReadingServices(rawBody);
@@ -45,6 +51,25 @@ public class ReadingServicesController {
     public ResponseEntity<byte[]> catchAll(HttpServletRequest request) {
         byte[] rawBody = RequestUtils.readBody(request);
         return koboServerProxy.proxyToReadingServices(rawBody);
+    }
+
+    private void persistAnnotations(String entitlementId, KoboAnnotationRequest annotationRequest) {
+        if (annotationRequest == null) {
+            return;
+        }
+        try {
+            Long bookId = Long.parseLong(entitlementId);
+            BookLoreUser user = authenticationService.getAuthenticatedUser();
+            if (user == null) {
+                log.warn("Cannot persist Kobo annotations: unable to resolve user");
+                return;
+            }
+            koboAnnotationSyncService.syncAnnotations(bookId, user.getId(), annotationRequest);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid entitlement ID for annotation persistence: {}", entitlementId);
+        } catch (Exception e) {
+            log.error("Failed to persist Kobo annotations for entitlement {}", entitlementId, e);
+        }
     }
 
     private void logAnnotationRequest(String entitlementId, KoboAnnotationRequest annotationRequest) {

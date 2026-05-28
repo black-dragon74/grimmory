@@ -7,9 +7,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.booklore.config.security.userdetails.UserAuthenticationDetails;
+import org.booklore.mapper.custom.BookLoreUserTransformer;
+import org.booklore.model.dto.BookLoreUser;
 import org.booklore.model.dto.kobo.KoboHeaders;
+import org.booklore.model.entity.BookLoreUserEntity;
 import org.booklore.model.entity.KoboUserSettingsEntity;
 import org.booklore.repository.KoboUserSettingsRepository;
+import org.booklore.repository.UserRepository;
 import org.springframework.boot.web.servlet.FilterRegistration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,6 +25,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -28,6 +34,8 @@ import java.util.List;
 public class DeviceIDAuthFilter extends OncePerRequestFilter {
 
     private final KoboUserSettingsRepository koboUserSettingsRepository;
+    private final UserRepository userRepository;
+    private final BookLoreUserTransformer bookLoreUserTransformer;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -41,26 +49,38 @@ public class DeviceIDAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!isDeviceIdAllowed(deviceId)) {
+        Optional<KoboUserSettingsEntity> settingsOpt = findSettingsForDeviceId(deviceId);
+        if (settingsOpt.isEmpty()) {
             log.warn("Reading services request with unrecognized device ID");
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid device ID");
             return;
         }
 
+        KoboUserSettingsEntity settings = settingsOpt.get();
+        Optional<BookLoreUserEntity> userOpt = userRepository.findByIdWithDetails(settings.getUserId());
+        if (userOpt.isEmpty()) {
+            log.warn("User not found for device ID");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+            return;
+        }
+
+        BookLoreUser user = bookLoreUserTransformer.toDTO(userOpt.get());
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                "kobo-device", null, List.of(new SimpleGrantedAuthority("ROLE_DEVICE"))
+                user, null, List.of(new SimpleGrantedAuthority("ROLE_DEVICE"))
         );
+        authentication.setDetails(new UserAuthenticationDetails(request, user.getId()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
     }
 
-    private boolean isDeviceIdAllowed(String deviceId) {
+    private Optional<KoboUserSettingsEntity> findSettingsForDeviceId(String deviceId) {
         List<KoboUserSettingsEntity> settingsWithDeviceIds = koboUserSettingsRepository.findByAllowedDeviceIdsIsNotNull();
         return settingsWithDeviceIds.stream()
-                .flatMap(settings -> Arrays.stream(settings.getAllowedDeviceIds().split(",")))
-                .map(String::trim)
-                .filter(id -> !id.isEmpty())
-                .anyMatch(id -> id.equals(deviceId));
+                .filter(settings -> Arrays.stream(settings.getAllowedDeviceIds().split(","))
+                        .map(String::trim)
+                        .filter(id -> !id.isEmpty())
+                        .anyMatch(id -> id.equals(deviceId)))
+                .findFirst();
     }
 }
