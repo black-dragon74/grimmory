@@ -3,6 +3,7 @@ package org.booklore.service.kobo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.booklore.model.dto.kobo.KoboResources;
+import org.booklore.repository.KoboUserSettingsRepository;
 import org.booklore.service.appsettings.AppSettingService;
 import org.booklore.util.kobo.KoboUrlBuilder;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class KoboInitializationService {
     private final KoboServerProxy koboServerProxy;
     private final KoboResourcesComponent koboResourcesComponent;
     private final KoboUrlBuilder koboUrlBuilder;
+    private final KoboUserSettingsRepository koboUserSettingsRepository;
 
     private static final Map<String, String[]> initializationResources = Map.<String, String[]>ofEntries(
             Map.entry("delete_entitlement", new String[]{"v1", "library", "{Ids}"}),
@@ -40,6 +42,12 @@ public class KoboInitializationService {
 
     private boolean isForwardingToKoboStore() {
         return appSettingService.getAppSettings().getKoboSettings().isForwardToKoboStore();
+    }
+
+    private boolean hasAllowedDeviceIds(String token) {
+        return koboUserSettingsRepository.findByToken(token)
+                .map(settings -> settings.getAllowedDeviceIds() != null && !settings.getAllowedDeviceIds().isBlank())
+                .orElse(false);
     }
 
     public ResponseEntity<KoboResources> initialize(String token) throws JacksonException {
@@ -71,8 +79,12 @@ public class KoboInitializationService {
             resources.put(entry.getKey(), koboUrlBuilder.withBaseUrl(token, entry.getValue()));
         }
 
-        // Redirect reading services to this server so we intercept annotations
-        resources.put("reading_services_host", baseBuilder.build().toUriString());
+        // Redirect reading services to this server so we intercept annotations, but only
+        // for users who have configured an allowed device ID, otherwise reading services
+        // would 401 against DeviceIDAuthFilter
+        if (hasAllowedDeviceIds(token)) {
+            resources.put("reading_services_host", baseBuilder.build().toUriString());
+        }
 
         // Build extra routes for CDN
         resources.put("image_host", baseBuilder.build().toUriString());

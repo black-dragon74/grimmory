@@ -64,7 +64,14 @@ public class DeviceIDAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        BookLoreUser user = bookLoreUserTransformer.toDTO(userOpt.get());
+        BookLoreUserEntity entity = userOpt.get();
+        if (entity.getPermissions() == null || !entity.getPermissions().isPermissionSyncKobo()) {
+            log.warn("User {} does not have syncKobo permission", entity.getId());
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Insufficient permissions");
+            return;
+        }
+
+        BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                 user, null, List.of(new SimpleGrantedAuthority("ROLE_DEVICE"))
         );
