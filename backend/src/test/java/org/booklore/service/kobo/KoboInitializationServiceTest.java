@@ -3,6 +3,8 @@ package org.booklore.service.kobo;
 import org.booklore.model.dto.kobo.KoboResources;
 import org.booklore.model.dto.settings.AppSettings;
 import org.booklore.model.dto.settings.KoboSettings;
+import org.booklore.model.entity.KoboUserSettingsEntity;
+import org.booklore.repository.KoboUserSettingsRepository;
 import org.booklore.service.appsettings.AppSettingService;
 import org.booklore.util.kobo.KoboUrlBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +32,8 @@ import static org.mockito.Mockito.*;
 @DisplayName("KoboInitializationService Tests")
 class KoboInitializationServiceTest {
 
+    private static final String BASE_URL = "http://localhost:8080";
+
     @Mock
     private AppSettingService appSettingService;
 
@@ -41,6 +45,9 @@ class KoboInitializationServiceTest {
 
     @Mock
     private KoboUrlBuilder koboUrlBuilder;
+
+    @Mock
+    private KoboUserSettingsRepository koboUserSettingsRepository;
 
     @InjectMocks
     private KoboInitializationService service;
@@ -61,7 +68,7 @@ class KoboInitializationServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(koboUrlBuilder.baseBuilder()).thenReturn(UriComponentsBuilder.fromUriString("http://localhost:8080"));
+        when(koboUrlBuilder.baseBuilder()).thenReturn(UriComponentsBuilder.fromUriString(BASE_URL));
         when(koboUrlBuilder.withBaseUrl(eq("test-token"), any())).thenReturn("http://localhost:8080/with-base-url");
         when(koboUrlBuilder.imageUrlTemplate("test-token")).thenReturn("http://localhost:8080/kobo/test-token/image/{ImageId}/{Width}/{Height}/false/image.jpg");
         when(koboUrlBuilder.imageUrlQualityTemplate("test-token")).thenReturn("http://localhost:8080/kobo/test-token/image/{ImageId}/{Width}/{Height}/{Quality}/{IsGreyscale}/image.jpg");
@@ -224,6 +231,38 @@ class KoboInitializationServiceTest {
 
             assertEquals(200, response.getStatusCode().value());
             verify(koboResourcesComponent).getResources();
+        }
+    }
+
+    @Nested
+    @DisplayName("Reading Services Host")
+    class ReadingServicesHost {
+
+        @Test
+        @DisplayName("Should omit reading_services_host when no allowed device IDs are configured")
+        void initialize_omitsReadingServicesHost_whenNoAllowedDeviceIds() throws Exception {
+            when(koboServerProxy.proxyCurrentRequest(null, false))
+                    .thenReturn(ResponseEntity.ok(null));
+            when(koboResourcesComponent.getResources()).thenReturn(objectMapper.createObjectNode());
+            when(koboUserSettingsRepository.findByToken("test-token")).thenReturn(java.util.Optional.empty());
+
+            ResponseEntity<KoboResources> response = service.initialize("test-token");
+
+            assertNull(response.getBody().getResources().get("reading_services_host"));
+        }
+
+        @Test
+        @DisplayName("Should include reading_services_host when allowed device IDs are configured")
+        void initialize_includesReadingServicesHost_whenAllowedDeviceIdsConfigured() throws Exception {
+            when(koboServerProxy.proxyCurrentRequest(null, false))
+                    .thenReturn(ResponseEntity.ok(null));
+            when(koboResourcesComponent.getResources()).thenReturn(objectMapper.createObjectNode());
+            when(koboUserSettingsRepository.findByToken("test-token")).thenReturn(
+                    java.util.Optional.of(KoboUserSettingsEntity.builder().allowedDeviceIds("device-1").build()));
+
+            ResponseEntity<KoboResources> response = service.initialize("test-token");
+
+            assertEquals(BASE_URL, response.getBody().getResources().get("reading_services_host").asText());
         }
     }
 
