@@ -27,17 +27,18 @@ public class NotebookService {
     private final AuthenticationService authenticationService;
 
     public Page<NotebookEntry> getNotebookEntries(int page, int size, Set<String> types, Long bookId,
-                                                  String search, String sort) {
+                                                  String source, String search, String sort) {
         Long userId = authenticationService.getAuthenticatedUser().getId();
         Pageable pageable = PageRequest.of(page, size, toSort(sort));
-        return repository.findEntries(userId, types, bookId, wrapSearch(search), pageable)
+        return repository.findEntries(userId, types, bookId, source, wrapSearch(search), pageable)
                 .map(NotebookService::toDto);
     }
 
-    public List<NotebookEntry> getAllNotebookEntries(Set<String> types, Long bookId, String search, String sort) {
+    public List<NotebookEntry> getAllNotebookEntries(Set<String> types, Long bookId, String source,
+                                                    String search, String sort) {
         Long userId = authenticationService.getAuthenticatedUser().getId();
         Pageable pageable = PageRequest.of(0, EXPORT_LIMIT, toSort(sort));
-        return repository.findEntries(userId, types, bookId, wrapSearch(search), pageable)
+        return repository.findEntries(userId, types, bookId, source, wrapSearch(search), pageable)
                 .map(NotebookService::toDto)
                 .getContent();
     }
@@ -79,6 +80,7 @@ public class NotebookService {
                 .color(p.getColor())
                 .style(p.getStyle())
                 .chapterTitle(p.getChapterTitle())
+                .source(p.getSource())
                 .primaryBookType(p.getPrimaryBookType())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())

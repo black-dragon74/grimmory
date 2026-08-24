@@ -52,6 +52,12 @@ public class AnnotationEntity {
     @Column(name = "chapter_title", length = 500)
     private String chapterTitle;
 
+    @Column(name = "external_id", length = 255)
+    private String externalId;
+
+    @Column(name = "source", length = 50)
+    private String source;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;

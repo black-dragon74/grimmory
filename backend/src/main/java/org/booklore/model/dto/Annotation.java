@@ -21,6 +21,8 @@ public class Annotation {
     private String style;
     private String note;
     private String chapterTitle;
+    private String externalId;
+    private String source;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

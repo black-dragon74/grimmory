@@ -28,6 +28,13 @@ interface BookOption {
   value: number;
 }
 
+interface SourceOption {
+  label: string;
+  value: string | null;
+}
+
+const NOTEBOOK_SOURCE_KEY = 'grimmory-notebook-source';
+
 const EMPTY_PAGE: NotebookPage = {
   content: [],
   page: { totalElements: 0, totalPages: 0, number: 0, size: 0 },
@@ -74,6 +81,9 @@ export class NotebookComponent implements OnInit {
   bookOptions: BookOption[] = [];
   selectedBookId: number | null = null;
 
+  sourceOptions: SourceOption[] = [];
+  selectedSource: string | null = localStorage.getItem(NOTEBOOK_SOURCE_KEY);
+
   page = 0;
   pageSize = 50;
   first = 0;
@@ -83,6 +93,11 @@ export class NotebookComponent implements OnInit {
   ngOnInit(): void {
     this.pageTitle.setPageTitle(this.t.translate('notebook.pageTitle'));
 
+    this.sourceOptions = [
+      { label: this.t.translate('notebook.sourceWebReader'), value: null },
+      { label: this.t.translate('notebook.sourceKobo'), value: 'kobo' },
+    ];
+
     this.loadTrigger$.pipe(
       switchMap(() => {
         const types = this.activeTypes;
@@ -91,7 +106,7 @@ export class NotebookComponent implements OnInit {
         }
         this.loading.set(true);
         return this.notebookService.getNotebookEntries(
-          this.page, this.pageSize, types, this.selectedBookId, this.searchQuery, this.sortDirection
+          this.page, this.pageSize, types, this.selectedBookId, this.selectedSource, this.searchQuery, this.sortDirection
         );
       }),
       takeUntilDestroyed(this.destroyRef)
@@ -130,6 +145,15 @@ export class NotebookComponent implements OnInit {
     this.page = 0;
     this.first = 0;
     this.loadTrigger$.next();
+  }
+
+  onSourceChange(): void {
+    if (this.selectedSource) {
+      localStorage.setItem(NOTEBOOK_SOURCE_KEY, this.selectedSource);
+    } else {
+      localStorage.removeItem(NOTEBOOK_SOURCE_KEY);
+    }
+    this.onFilterChange();
   }
 
   onBookFilter(event: { filter: string }): void {
@@ -235,7 +259,7 @@ export class NotebookComponent implements OnInit {
 
     this.exporting = true;
     this.notebookService.getExportEntries(
-      types, this.selectedBookId, this.searchQuery, this.sortDirection
+      types, this.selectedBookId, this.selectedSource, this.searchQuery, this.sortDirection
     ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(entries => {
       this.generateMarkdownDownload(entries);
       this.exporting = false;

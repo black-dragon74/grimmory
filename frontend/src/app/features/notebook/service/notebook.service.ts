@@ -13,7 +13,7 @@ export class NotebookService {
   private readonly http = inject(HttpClient);
 
   getNotebookEntries(page: number, size: number, types: string[], bookId: number | null,
-                     search: string, sort: string): Observable<NotebookPage> {
+                     source: string | null, search: string, sort: string): Observable<NotebookPage> {
     let params = new HttpParams()
       .set('page', page)
       .set('size', size)
@@ -25,6 +25,9 @@ export class NotebookService {
     if (bookId !== null) {
       params = params.set('bookId', bookId);
     }
+    if (source !== null) {
+      params = params.set('source', source);
+    }
     if (search.trim()) {
       params = params.set('search', search.trim());
     }
@@ -32,8 +35,8 @@ export class NotebookService {
     return this.http.get<NotebookPage>(this.url, {params});
   }
 
-  getExportEntries(types: string[], bookId: number | null, search: string,
-                   sort: string): Observable<NotebookEntry[]> {
+  getExportEntries(types: string[], bookId: number | null, source: string | null,
+                   search: string, sort: string): Observable<NotebookEntry[]> {
     let params = new HttpParams().set('sort', sort);
 
     for (const type of types) {
@@ -41,6 +44,9 @@ export class NotebookService {
     }
     if (bookId !== null) {
       params = params.set('bookId', bookId);
+    }
+    if (source !== null) {
+      params = params.set('source', source);
     }
     if (search.trim()) {
       params = params.set('search', search.trim());
