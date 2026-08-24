@@ -3,6 +3,7 @@ package org.booklore.service.kobo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.booklore.model.dto.kobo.KoboResources;
+import org.booklore.repository.KoboUserSettingsRepository;
 import org.booklore.service.appsettings.AppSettingService;
 import org.booklore.util.kobo.KoboUrlBuilder;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.Arrays;
 import java.util.Map;
 
 @Slf4j
@@ -23,6 +25,7 @@ public class KoboInitializationService {
     private final KoboServerProxy koboServerProxy;
     private final KoboResourcesComponent koboResourcesComponent;
     private final KoboUrlBuilder koboUrlBuilder;
+    private final KoboUserSettingsRepository koboUserSettingsRepository;
 
     private static final Map<String, String[]> initializationResources = Map.<String, String[]>ofEntries(
             Map.entry("delete_entitlement", new String[]{"v1", "library", "{Ids}"}),
@@ -40,6 +43,13 @@ public class KoboInitializationService {
 
     private boolean isForwardingToKoboStore() {
         return appSettingService.getAppSettings().getKoboSettings().isForwardToKoboStore();
+    }
+
+    private boolean hasAllowedDeviceIds(String token) {
+        return koboUserSettingsRepository.findByToken(token)
+                .map(settings -> settings.getAllowedDeviceIds())
+                .filter(ids -> Arrays.stream(ids.split(",")).anyMatch(id -> !id.isBlank()))
+                .isPresent();
     }
 
     public ResponseEntity<KoboResources> initialize(String token) throws JacksonException {
@@ -69,6 +79,11 @@ public class KoboInitializationService {
 
         for (Map.Entry<String, String[]> entry : initializationResources.entrySet()) {
             resources.put(entry.getKey(), koboUrlBuilder.withBaseUrl(token, entry.getValue()));
+        }
+
+        // Only redirect devices that can authenticate with the reading-services proxy.
+        if (hasAllowedDeviceIds(token)) {
+            resources.put("reading_services_host", baseBuilder.build().toUriString());
         }
 
         // Build extra routes for CDN

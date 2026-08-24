@@ -17,8 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -85,6 +87,7 @@ public class KoboSettingsService {
 
         entity.setAutoAddToShelf(settings.isAutoAddToShelf());
         entity.setTwoWayProgressSync(settings.isTwoWayProgressSync());
+        entity.setAllowedDeviceIds(normalizeDeviceIds(settings.getAllowedDeviceIds()));
 
         repository.save(entity);
         return mapToDto(entity, hardcoverSyncSettingsService.getSettingsForUserId(user.getId()));
@@ -117,6 +120,18 @@ public class KoboSettingsService {
         return UUID.randomUUID().toString();
     }
 
+    private String normalizeDeviceIds(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(id -> !id.isEmpty())
+                .distinct()
+                .collect(Collectors.joining(","));
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     private KoboSyncSettings mapToDto(KoboUserSettingsEntity entity) {
         HardcoverSyncSettings hardcoverSettings = hardcoverSyncSettingsService.getSettingsForUserId(entity.getUserId());
         return mapToDto(entity, hardcoverSettings);
@@ -132,6 +147,7 @@ public class KoboSettingsService {
         dto.setProgressMarkAsFinishedThreshold(entity.getProgressMarkAsFinishedThreshold());
         dto.setAutoAddToShelf(entity.isAutoAddToShelf());
         dto.setTwoWayProgressSync(entity.isTwoWayProgressSync());
+        dto.setAllowedDeviceIds(entity.getAllowedDeviceIds());
         if (hardcoverSettings != null) {
             dto.setHardcoverApiKey(hardcoverSettings.getHardcoverApiKey());
             dto.setHardcoverSyncEnabled(hardcoverSettings.isHardcoverSyncEnabled());
