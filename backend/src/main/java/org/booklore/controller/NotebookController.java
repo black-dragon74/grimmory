@@ -30,9 +30,10 @@ public class NotebookController {
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) Set<String> types,
             @RequestParam(required = false) Long bookId,
+            @RequestParam(required = false) String source,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "desc") String sort) {
-        return notebookService.getNotebookEntries(page, size, types, bookId, search, sort);
+        return notebookService.getNotebookEntries(page, size, types, bookId, source, search, sort);
     }
 
     @Operation(summary = "Get all notebook entries for export")
@@ -40,9 +41,10 @@ public class NotebookController {
     public List<NotebookEntry> exportNotebookEntries(
             @RequestParam(required = false) Set<String> types,
             @RequestParam(required = false) Long bookId,
+            @RequestParam(required = false) String source,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "desc") String sort) {
-        return notebookService.getAllNotebookEntries(types, bookId, search, sort);
+        return notebookService.getAllNotebookEntries(types, bookId, source, search, sort);
     }
 
     @Operation(summary = "Get books that have annotations")

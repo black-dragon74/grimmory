@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
            a.color,
            a.style,
            a.chapter_title,
+           a.source AS source,
            (SELECT bf.book_type FROM book_file bf WHERE bf.book_id = a.book_id ORDER BY bf.id LIMIT 1) AS primary_book_type,
            bm.cover_updated_on,
            a.created_at,
@@ -42,6 +43,7 @@ import java.time.LocalDateTime;
            n.color,
            NULL,
            n.chapter_title,
+           NULL,
            (SELECT bf.book_type FROM book_file bf WHERE bf.book_id = n.book_id ORDER BY bf.id LIMIT 1),
            bm.cover_updated_on,
            n.created_at,
@@ -58,6 +60,7 @@ import java.time.LocalDateTime;
            b.title,
            b.notes,
            b.color,
+           NULL,
            NULL,
            NULL,
            (SELECT bf.book_type FROM book_file bf WHERE bf.book_id = b.book_id ORDER BY bf.id LIMIT 1),
@@ -102,6 +105,9 @@ public class NotebookEntryView {
 
     @Column(name = "chapter_title")
     private String chapterTitle;
+
+    @Column(name = "source")
+    private String source;
 
     @Column(name = "primary_book_type")
     private String primaryBookType;

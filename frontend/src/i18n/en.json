@@ -2800,6 +2800,8 @@
     "filterHighlights": "Highlights",
     "filterNotes": "Notes",
     "filterBookmarks": "Bookmarks",
+    "sourceWebReader": "Web Reader",
+    "sourceKobo": "Kobo",
     "filterByBook": "Filter by book",
     "allBooks": "All Books",
     "sortNewest": "Newest first",
