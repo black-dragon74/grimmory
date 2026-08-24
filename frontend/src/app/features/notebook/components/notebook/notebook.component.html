@@ -27,6 +27,16 @@
           </span>
 
           <p-select
+            [(ngModel)]="selectedSource"
+            [options]="sourceOptions"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            (ngModelChange)="onSourceChange()"
+            class="source-select"
+          />
+
+          <p-select
             [(ngModel)]="selectedBookId"
             [options]="bookOptions"
             optionLabel="label"

@@ -81,7 +81,7 @@ public class AppNotebookService {
         Pageable pageable = PageRequest.of(page, size, toSort(sort));
 
         Page<NotebookEntryRepository.EntryProjection> entriesPage =
-                notebookEntryRepository.findEntries(userId, entryTypes, bookId, wrapSearch(search), pageable);
+                notebookEntryRepository.findEntries(userId, entryTypes, bookId, null, wrapSearch(search), pageable);
 
         List<AppNotebookEntry> entries = entriesPage.getContent().stream()
                 .map(AppNotebookService::toMobileEntry)
